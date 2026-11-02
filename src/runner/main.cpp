@@ -17,9 +17,6 @@
 #include <common/Telemetry/EtwTrace/EtwTrace.h>
 #include <common/notifications/notifications.h>
 #include <common/notifications/dont_show_again.h>
-#include <common/updating/installer.h>
-#include <common/updating/updating.h>
-#include <common/updating/updateState.h>
 #include <common/utils/appMutex.h>
 #include <common/utils/elevation.h>
 #include <common/utils/os-detect.h>
@@ -27,7 +24,6 @@
 #include <common/utils/resources.h>
 #include <common/utils/clean_video_conference.h>
 
-#include "UpdateUtils.h"
 #include "ActionRunnerUtils.h"
 
 #include <winrt/Windows.System.h>
@@ -38,8 +34,6 @@
 #include "centralized_kb_hook.h"
 #include "centralized_hotkeys.h"
 #include "quick_access_host.h"
-#include "ai_detection.h"
-#include <common/utils/package.h>
 
 #if _DEBUG && _WIN64
 #include "unhandled_exception_handler.h"
@@ -78,88 +72,6 @@ void chdir_current_executable()
     {
         show_last_error_message(L"Change Directory to Executable Path", GetLastError(), L"PowerToys - runner");
     }
-}
-
-// Detect AI capabilities by calling ImageResizer in detection mode.
-// This runs in a background thread to avoid blocking the main startup.
-// ImageResizer writes the result to a cache file that it reads on normal startup.
-void DetectAiCapabilitiesAsync(bool skipSettingsCheck)
-{
-    std::thread([skipSettingsCheck]() {
-        try
-        {
-            // Check if ImageResizer module is enabled (skip if called from apply_general_settings)
-            if (!skipSettingsCheck)
-            {
-                auto settings = PTSettingsHelper::load_general_settings();
-                if (json::has(settings, L"enabled", json::JsonValueType::Object))
-                {
-                    auto enabledModules = settings.GetNamedObject(L"enabled");
-                    if (json::has(enabledModules, L"Image Resizer", json::JsonValueType::Boolean))
-                    {
-                        bool isEnabled = enabledModules.GetNamedBoolean(L"Image Resizer", false);
-                        if (!isEnabled)
-                        {
-                            Logger::info(L"ImageResizer module is disabled, skipping AI detection");
-                            return;
-                        }
-                    }
-                }
-            }
-
-            // Get ImageResizer.exe path (located in WinUI3Apps folder)
-            std::wstring imageResizerPath = get_module_folderpath();
-            imageResizerPath += L"\\WinUI3Apps\\PowerToys.ImageResizer.exe";
-
-            if (!std::filesystem::exists(imageResizerPath))
-            {
-                Logger::warn(L"ImageResizer.exe not found at {}, skipping AI detection", imageResizerPath);
-                return;
-            }
-
-            Logger::info(L"Starting AI capability detection via ImageResizer");
-
-            // Call ImageResizer --detect-ai
-            SHELLEXECUTEINFO sei = { sizeof(sei) };
-            sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
-            sei.lpFile = imageResizerPath.c_str();
-            sei.lpParameters = L"--detect-ai";
-            sei.nShow = SW_HIDE;
-
-            if (ShellExecuteExW(&sei))
-            {
-                const wil::unique_handle process{ sei.hProcess };
-
-                // Wait for detection to complete (with timeout)
-                DWORD waitResult = WaitForSingleObject(process.get(), 30000); // 30 second timeout
-
-                if (waitResult == WAIT_OBJECT_0)
-                {
-                    Logger::info(L"AI capability detection completed successfully");
-                }
-                else if (waitResult == WAIT_TIMEOUT)
-                {
-                    Logger::warn(L"AI capability detection timed out");
-                }
-                else
-                {
-                    Logger::warn(L"AI capability detection wait failed");
-                }
-            }
-            else
-            {
-                Logger::warn(L"Failed to launch ImageResizer for AI detection, error: {}", GetLastError());
-            }
-        }
-        catch (const std::exception& e)
-        {
-            Logger::error("Exception during AI capability detection: {}", e.what());
-        }
-        catch (...)
-        {
-            Logger::error("Unknown exception during AI capability detection");
-        }
-    }).detach();
 }
 
 inline wil::unique_mutex_nothrow create_msi_mutex()
@@ -244,29 +156,6 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
             }.detach();
         }
 
-        std::thread{ [] {
-            PeriodicUpdateWorker();
-        } }.detach();
-
-        // Start AI capability detection in background (Windows 11+ only)
-        // AI Super Resolution is not supported on Windows 10
-        // This calls ImageResizer --detect-ai which writes result to cache file
-        if (package::IsWin11OrGreater())
-        {
-            DetectAiCapabilitiesAsync();
-        }
-        else
-        {
-            Logger::info(L"AI capability detection skipped: Windows 10 does not support AI Super Resolution");
-        }
-
-        std::thread{ [] {
-            if (updating::uninstall_previous_msix_version_async().get())
-            {
-                notifications::show_toast(GET_RESOURCE_STRING(IDS_OLDER_MSIX_UNINSTALLED).c_str(), L"PowerToys");
-            }
-        } }.detach();
-
         chdir_current_executable();
 
         // We deprecated a utility called Video Conference Mute, which registered itself as a video input device.
@@ -279,44 +168,8 @@ int runner(bool isProcessElevated, bool openSettings, std::string settingsWindow
 
         // Load PowerToys DLLs
 
-        std::vector<std::wstring_view> knownModules = {
-            L"PowerToys.FancyZonesModuleInterface.dll",
-            L"PowerToys.powerpreview.dll",
-            L"WinUI3Apps/PowerToys.ImageResizerExt.dll",
-            L"PowerToys.KeyboardManager.dll",
-            L"PowerToys.Launcher.dll",
-            L"WinUI3Apps/PowerToys.PowerRenameExt.dll",
-            L"WinUI3Apps/PowerToys.ShortcutGuideModuleInterface.dll",
-            L"PowerToys.ColorPicker.dll",
-            L"PowerToys.AwakeModuleInterface.dll",
-            L"PowerToys.FindMyMouse.dll",
-            L"PowerToys.MouseHighlighter.dll",
-            L"WinUI3Apps/PowerToys.MouseJump.dll",
+        const std::vector<std::wstring_view> knownModules = {
             L"PowerToys.AlwaysOnTopModuleInterface.dll",
-            L"PowerToys.MousePointerCrosshairs.dll",
-            L"PowerToys.AutoHideCursor.dll",
-            L"PowerToys.CursorWrap.dll",
-            L"PowerToys.MouseButtonLock.dll",
-            L"PowerToys.PowerAccentModuleInterface.dll",
-            L"PowerToys.PowerOCRModuleInterface.dll",
-            L"PowerToys.AdvancedPasteModuleInterface.dll",
-            L"WinUI3Apps/PowerToys.FileLocksmithExt.dll",
-            L"WinUI3Apps/PowerToys.RegistryPreviewExt.dll",
-            L"WinUI3Apps/PowerToys.MeasureToolModuleInterface.dll",
-            L"WinUI3Apps/PowerToys.NewPlus.ShellExtension.dll",
-            L"WinUI3Apps/PowerToys.HostsModuleInterface.dll",
-            L"WinUI3Apps/PowerToys.Peek.dll",
-            L"WinUI3Apps/PowerToys.EnvironmentVariablesModuleInterface.dll",
-            L"PowerToys.MouseWithoutBordersModuleInterface.dll",
-            L"PowerToys.CropAndLockModuleInterface.dll",
-            L"PowerToys.CmdNotFoundModuleInterface.dll",
-            L"PowerToys.WorkspacesModuleInterface.dll",
-            L"PowerToys.CmdPalModuleInterface.dll",
-            L"PowerToys.ZoomItModuleInterface.dll",
-            L"PowerToys.LightSwitchModuleInterface.dll",
-            L"PowerToys.PowerDisplayModuleInterface.dll",
-            L"PowerToys.GrabAndMoveModuleInterface.dll",
-            L"PowerToys.AltWindowCycle.dll",
         };
 
         for (auto moduleSubdir : knownModules)
@@ -407,8 +260,7 @@ enum class SpecialMode
 {
     None,
     Win32ToastNotificationCOMServer,
-    ToastNotificationHandler,
-    ReportSuccessfulUpdate
+    ToastNotificationHandler
 };
 
 SpecialMode should_run_in_special_mode(const int n_cmd_args, LPWSTR* cmd_arg_list)
@@ -422,10 +274,6 @@ SpecialMode should_run_in_special_mode(const int n_cmd_args, LPWSTR* cmd_arg_lis
         else if (n_cmd_args == 2 && !wcsncmp(PT_URI_PROTOCOL_SCHEME, cmd_arg_list[i], wcslen(PT_URI_PROTOCOL_SCHEME)))
         {
             return SpecialMode::ToastNotificationHandler;
-        }
-        else if (n_cmd_args == 2 && !wcscmp(cmdArg::UPDATE_REPORT_SUCCESS, cmd_arg_list[i]))
-        {
-            return SpecialMode::ReportSuccessfulUpdate;
         }
     }
 
@@ -450,17 +298,10 @@ toast_notification_handler_result toast_notification_handler(const std::wstring_
     const std::wstring_view couldnt_toggle_powerpreview_modules_disable = L"couldnt_toggle_powerpreview_modules_disable/";
     const std::wstring_view open_settings = L"open_settings/";
     const std::wstring_view open_overview = L"open_overview/";
-    const std::wstring_view update_now = L"update_now/";
 
     if (param == cant_drag_elevated_disable)
     {
         return notifications::disable_toast(notifications::ElevatedDontShowAgainRegistryPath) ? toast_notification_handler_result::exit_success : toast_notification_handler_result::exit_error;
-    }
-    else if (param.starts_with(update_now))
-    {
-        std::wstring args{ cmdArg::UPDATE_NOW_LAUNCH_STAGE1 };
-        LaunchPowerToysUpdate(args.c_str());
-        return toast_notification_handler_result::exit_success;
     }
     else if (param == couldnt_toggle_powerpreview_modules_disable)
     {
@@ -521,16 +362,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
             return 0;
         }
         [[fallthrough]];
-    case SpecialMode::ReportSuccessfulUpdate:
-    {
-        notifications::remove_toasts_by_tag(notifications::UPDATING_PROCESS_TOAST_TAG);
-        notifications::remove_all_scheduled_toasts();
-        notifications::show_toast(GET_RESOURCE_STRING(IDS_PT_UPDATE_MESSAGE_BOX_TEXT),
-                                  L"PowerToys",
-                                  notifications::toast_params{ notifications::UPDATING_PROCESS_TOAST_TAG });
-        break;
-    }
-
     case SpecialMode::None:
         // continue as usual
         break;
@@ -563,30 +394,10 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         return 0;
     }
 
-    bool openOobe = false;
-    try
-    {
-        openOobe = !PTSettingsHelper::get_oobe_opened_state();
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("Failed to get or save OOBE state with an exception: {}", e.what());
-    }
-
-    bool openScoobe = false;
-    bool showRestartNotificationAfterUpdate = false;
-    try
-    {
-        std::wstring last_version_run = PTSettingsHelper::get_last_version_run();
-        const auto product_version = get_product_version();
-        openScoobe = product_version != last_version_run;
-        showRestartNotificationAfterUpdate = openScoobe;
-        Logger::info(L"Scoobe: product_version={} last_version_run={}", product_version, last_version_run);
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("Failed to get last version with an exception: {}", e.what());
-    }
+    // This build is a tray-resident Always On Top utility. Settings is opened only on demand.
+    constexpr bool openOobe = false;
+    constexpr bool openScoobe = false;
+    constexpr bool showRestartNotificationAfterUpdate = false;
 
     int result = 0;
     try
@@ -614,14 +425,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
             Logger::info("Runner module shutdown completed");
         });
 
-        std::thread{ [] {
-            auto state = UpdateState::read();
-            if (state.state == UpdateState::upToDate)
-            {
-                updating::cleanup_updates();
-            }
-        } }.detach();
-
         auto general_settings = load_general_settings();
 
         // Apply the general settings but don't save it as the modules() variable has not been loaded yet
@@ -630,16 +433,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR l
         const bool with_dont_elevate_arg = cmdLine.find("--dont-elevate") != std::string::npos;
         const bool run_elevated_setting = general_settings.GetNamedBoolean(L"run_elevated", false);
         const bool with_restartedElevated_arg = cmdLine.find("--restartedElevated") != std::string::npos;
-
-        // Update scoobe behavior based on setting and gpo
-        bool scoobeSettingDisabled = general_settings.GetNamedBoolean(L"show_whats_new_after_updates", true) == false;
-        bool scoobeDisabledByGpo = powertoys_gpo::getDisableShowWhatsNewAfterUpdatesValue() == powertoys_gpo::gpo_rule_configured_enabled;
-        if (openScoobe && (scoobeSettingDisabled || scoobeDisabledByGpo))
-        {
-            // Scoobe should show after an update, but is disabled by policy or setting
-            Logger::info(L"Scoobe: Showing scoobe after updates is disabled by setting or by GPO.");
-            openScoobe = false;
-        }
 
         bool dataDiagnosticsDisabledByGpo = powertoys_gpo::getAllowDataDiagnosticsValue() == powertoys_gpo::gpo_rule_configured_disabled;
         if (dataDiagnosticsDisabledByGpo)

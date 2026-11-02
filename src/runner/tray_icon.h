@@ -9,8 +9,6 @@ void start_tray_icon(bool isProcessElevated, bool theme_adaptive);
 void set_tray_icon_visible(bool shouldIconBeVisible);
 // Enable or disable theme adaptive tray icon at runtime
 void set_tray_icon_theme_adaptive(bool theme_adaptive);
-// Show or hide the update-available badge on the tray icon
-void set_tray_icon_update_available(bool available);
 // Stop the Tray Icon
 void stop_tray_icon();
 // True after the runner observed that the full Windows session is ending.

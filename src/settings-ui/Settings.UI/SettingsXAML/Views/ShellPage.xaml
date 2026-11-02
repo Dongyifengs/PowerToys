@@ -115,7 +115,8 @@
                     SuggestionChosen="SearchBox_SuggestionChosen"
                     TextChanged="SearchBox_TextChanged"
                     TextMemberPath="Header"
-                    UpdateTextOnSelect="False">
+                    UpdateTextOnSelect="False"
+                    Visibility="Collapsed">
                     <AutoSuggestBox.KeyboardAccelerators>
                         <KeyboardAccelerator
                             Key="F"
@@ -147,17 +148,26 @@
             </NavigationView.Resources>
             <NavigationView.MenuItems>
                 <NavigationViewItem
+                    x:Name="AlwaysOnTopOnlyNavigationItem"
+                    x:Uid="Shell_AlwaysOnTop"
+                    helpers:NavHelper.NavigateTo="views:AlwaysOnTopPage"
+                    AutomationProperties.AutomationId="AlwaysOnTopOnlyNavItem"
+                    Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/AlwaysOnTop.png}" />
+
+                <NavigationViewItem
                     x:Name="DashboardNavigationItem"
                     x:Uid="Shell_Dashboard"
                     helpers:NavHelper.NavigateTo="views:DashboardPage"
                     AutomationProperties.AutomationId="DashboardNavItem"
-                    Icon="{ui:FontIcon Glyph=&#xE80F;}" />
+                    Icon="{ui:FontIcon Glyph=&#xE80F;}"
+                    Visibility="Collapsed" />
 
                 <NavigationViewItem
                     x:Name="GeneralNavigationItem"
                     x:Uid="Shell_General"
                     helpers:NavHelper.NavigateTo="views:GeneralPage"
-                    AutomationProperties.AutomationId="GeneralNavItem">
+                    AutomationProperties.AutomationId="GeneralNavItem"
+                    Visibility="Collapsed">
                     <NavigationViewItem.Icon>
                         <AnimatedIcon>
                             <AnimatedIcon.Source>
@@ -168,16 +178,6 @@
                             </AnimatedIcon.FallbackIconSource>
                         </AnimatedIcon>
                     </NavigationViewItem.Icon>
-                    <NavigationViewItem.InfoBadge>
-                        <InfoBadge
-                            x:Name="UpdateInfoBadge"
-                            Margin="0,0,2,0"
-                            AutomationProperties.AccessibilityView="Content"
-                            AutomationProperties.AutomationId="UpdateNavigationBadge"
-                            AutomationProperties.Name="{x:Bind UpdateViewModel.StatusTitle, Mode=OneWay}"
-                            Style="{StaticResource UpdateInfoBadgeStyle}"
-                            Visibility="{x:Bind UpdateViewModel.ShowUpdateBadge, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
-                    </NavigationViewItem.InfoBadge>
                 </NavigationViewItem>
                 <NavigationViewItemSeparator />
 
@@ -187,7 +187,8 @@
                     x:Uid="Shell_TopLevelSystemTools"
                     AutomationProperties.AutomationId="SystemToolsNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/SystemTools.png}"
-                    SelectsOnInvoked="False">
+                    SelectsOnInvoked="False"
+                    Visibility="Collapsed">
                     <NavigationViewItem.MenuItems>
                         <NavigationViewItem
                             x:Name="AdvancedPasteNavigationItem"
@@ -258,7 +259,8 @@
                     x:Uid="Shell_TopLevelWindowsAndLayouts"
                     AutomationProperties.AutomationId="WindowingAndLayoutsNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/WindowingAndLayouts.png}"
-                    SelectsOnInvoked="False">
+                    SelectsOnInvoked="False"
+                    Visibility="Collapsed">
                     <NavigationViewItem.MenuItems>
                         <NavigationViewItem
                             x:Name="AlwaysOnTopNavigationItem"
@@ -305,7 +307,8 @@
                     x:Uid="Shell_TopLevelInputOutput"
                     AutomationProperties.AutomationId="InputOutputNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/InputOutput.png}"
-                    SelectsOnInvoked="False">
+                    SelectsOnInvoked="False"
+                    Visibility="Collapsed">
                     <NavigationViewItem.InfoBadge>
                         <InfoBadge Style="{StaticResource NewInfoBadge}" />
                     </NavigationViewItem.InfoBadge>
@@ -353,7 +356,8 @@
                     x:Uid="Shell_TopLevelFileManagement"
                     AutomationProperties.AutomationId="FileManagementNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/FileManagement.png}"
-                    SelectsOnInvoked="False">
+                    SelectsOnInvoked="False"
+                    Visibility="Collapsed">
                     <NavigationViewItem.MenuItems>
                         <NavigationViewItem
                             x:Name="PowerPreviewNavigationItem"
@@ -401,7 +405,8 @@
                     x:Uid="Shell_TopLevelAdvanced"
                     AutomationProperties.AutomationId="AdvancedNavItem"
                     Icon="{ui:BitmapIcon Source=/Assets/Settings/Icons/Advanced.png}"
-                    SelectsOnInvoked="False">
+                    SelectsOnInvoked="False"
+                    Visibility="Collapsed">
                     <NavigationViewItem.MenuItems>
                         <NavigationViewItem
                             x:Name="CmdNotFoundNavigationItem"
@@ -431,7 +436,7 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
             <NavigationView.PaneFooter>
-                <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Vertical" Visibility="Collapsed">
                     <NavigationViewItem
                         x:Name="OOBENavigationItem"
                         x:Uid="OOBE_NavViewItem"
@@ -466,14 +471,6 @@
             </i:Interaction.Behaviors>
             <Frame x:Name="shellFrame" />
         </NavigationView>
-        <controls:UpdateActivityControl
-            x:Name="UpdateActivity"
-            Grid.Row="1"
-            Margin="12"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Canvas.ZIndex="2"
-            ViewModel="{x:Bind UpdateViewModel, Mode=OneWay}" />
         <ContentDialog
             x:Name="CloseDialog"
             x:Uid="CloseDialog"

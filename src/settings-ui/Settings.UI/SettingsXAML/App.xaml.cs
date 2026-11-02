@@ -72,7 +72,7 @@ namespace Microsoft.PowerToys.Settings.UI
 
         public bool ShowScoobe { get; set; }
 
-        public Type StartupPage { get; set; } = typeof(Views.DashboardPage);
+        public Type StartupPage { get; set; } = typeof(Views.AlwaysOnTopPage);
 
         public static Action<string> IPCMessageReceivedCallback { get; set; }
 
@@ -112,17 +112,9 @@ namespace Microsoft.PowerToys.Settings.UI
 
         public static void OpenSettingsWindow(Type type = null, bool ensurePageIsSelected = false)
         {
-            bool isNewWindowSession = settingsWindow == null ||
-                                      !NativeMethods.IsWindowVisible(settingsWindow.GetWindowHandle());
-
             if (settingsWindow == null)
             {
                 settingsWindow = new MainWindow();
-            }
-
-            if (isNewWindowSession)
-            {
-                settingsWindow.BeginWindowSession();
             }
 
             settingsWindow.Activate();
@@ -441,6 +433,11 @@ namespace Microsoft.PowerToys.Settings.UI
 
         public static Type GetPage(string settingWindow)
         {
+            if (!string.Equals(settingWindow, "AlwaysOnTop", StringComparison.OrdinalIgnoreCase))
+            {
+                return typeof(AlwaysOnTopPage);
+            }
+
             switch (settingWindow)
             {
                 case "Dashboard": return typeof(DashboardPage);

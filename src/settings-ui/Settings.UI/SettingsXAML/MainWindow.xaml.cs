@@ -68,11 +68,6 @@ namespace Microsoft.PowerToys.Settings.UI
             });
 
             // send IPC Message
-            ShellPage.SetCheckForUpdatesMessageCallback(msg =>
-            {
-                App.GetTwoWayIPCManager()?.Send(msg);
-            });
-
             // open main window
             ShellPage.SetOpenMainWindowCallback(type =>
             {
@@ -146,11 +141,6 @@ namespace Microsoft.PowerToys.Settings.UI
         public void NavigateToSection(Type type)
         {
             ShellPage.Navigate(type);
-        }
-
-        public void BeginWindowSession()
-        {
-            shellPage.BeginWindowSession();
         }
 
         public void CloseHiddenWindow()
