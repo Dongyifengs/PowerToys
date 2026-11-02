@@ -79,9 +79,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         /// </summary>
         public static UpdatingGeneralSettingsCallback UpdateGeneralSettingsCallback { get; set; }
 
-        /// <summary>
-        /// Gets view model.
-        /// </summary>
         public ShellViewModel ViewModel { get; }
 
         public UpdateViewModel UpdateViewModel { get; }
@@ -117,7 +114,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             var settingsUtils = SettingsUtils.Default;
             var generalSettingsRepository = SettingsRepository<GeneralSettings>.GetInstance(settingsUtils);
             ViewModel = new ShellViewModel(generalSettingsRepository);
-            UpdateViewModel = new UpdateViewModel(generalSettingsRepository, SendCheckForUpdatesIPCMessage);
+            UpdateViewModel = new UpdateViewModel(generalSettingsRepository, _ => 1);
             DataContext = ViewModel;
             ShellHandler = this;
             ViewModel.Initialize(shellFrame, navigationView, KeyboardAccelerators);
@@ -150,17 +147,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
             return 0;
         }
 
-        public static int SendCheckForUpdatesIPCMessage(string msg)
-        {
-            if (CheckForUpdatesMsgCallback is null)
-            {
-                return 1;
-            }
-
-            CheckForUpdatesMsgCallback(msg);
-            return 0;
-        }
-
         public static int SendRestartAdminIPCMessage(string msg)
         {
             SndRestartAsAdminMsgCallback?.Invoke(msg);
@@ -189,11 +175,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
         /// Set check for updates IPC callback function.
         /// </summary>
         /// <param name="implementation">delegate function implementation.</param>
-        public static void SetCheckForUpdatesMessageCallback(IPCMessageCallback implementation)
-        {
-            CheckForUpdatesMsgCallback = implementation;
-        }
-
         /// <summary>
         /// Set main window opening callback function
         /// </summary>
@@ -229,17 +210,11 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         public void Refresh()
         {
-            shellFrame.Navigate(typeof(DashboardPage));
+            shellFrame.Navigate(typeof(AlwaysOnTopPage));
         }
 
         public void OpenUpdateActivity()
         {
-            UpdateActivity.Open();
-        }
-
-        public void BeginWindowSession()
-        {
-            UpdateViewModel.BeginWindowSession();
         }
 
         // Tell the current page view model to update
@@ -351,7 +326,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
 
         internal static void EnsurePageIsSelected()
         {
-            NavigationService.EnsurePageIsSelected(typeof(DashboardPage));
+            NavigationService.EnsurePageIsSelected(typeof(AlwaysOnTopPage));
         }
 
         private void SetWindowTitle()
@@ -630,7 +605,7 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 var queryText = (args.QueryText ?? _lastQueryText)?.Trim();
                 if (string.IsNullOrWhiteSpace(queryText))
                 {
-                    NavigationService.Navigate<DashboardPage>();
+                    NavigationService.Navigate<AlwaysOnTopPage>();
                     return;
                 }
 
@@ -655,7 +630,6 @@ namespace Microsoft.PowerToys.Settings.UI.Views
                 return;
             }
 
-            UpdateViewModel.Dispose();
             _searchDebounceCts?.Cancel();
             _searchDebounceCts?.Dispose();
             _searchDebounceCts = null;

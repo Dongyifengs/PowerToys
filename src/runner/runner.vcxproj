@@ -81,11 +81,9 @@
     <ClCompile Include="trace.cpp" />
     <ClCompile Include="tray_icon.cpp" />
     <ClCompile Include="unhandled_exception_handler.cpp" />
-    <ClCompile Include="UpdateUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActionRunnerUtils.h" />
-    <ClInclude Include="ai_detection.h" />
     <ClInclude Include="auto_start_helper.h" />
     <ClInclude Include="bug_report.h" />
     <ClInclude Include="bug_report_dialog.h" />
@@ -97,7 +95,6 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="centralized_kb_hook.h" />
     <ClInclude Include="settings_telemetry.h" />
-    <ClInclude Include="UpdateUtils.h" />
     <ClInclude Include="powertoy_module.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="restart_elevated.h" />
@@ -113,11 +110,6 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="svgs\icon.ico">
-      <DeploymentContent>true</DeploymentContent>
-      <FileType>Document</FileType>
-      <DestinationFolders>$(OutDir)\svgs</DestinationFolders>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="svgs\iconUpdate.ico">
       <DeploymentContent>true</DeploymentContent>
       <FileType>Document</FileType>
       <DestinationFolders>$(OutDir)\svgs</DestinationFolders>
@@ -142,9 +134,6 @@
     <ProjectReference Include="..\common\Themes\Themes.vcxproj">
       <Project>{98537082-0fdb-40de-abd8-0dc5a4269bab}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\common\updating\updating.vcxproj">
-      <Project>{17da04df-e393-4397-9cf0-84dabe11032e}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="PowerToys.exe.manifest" />
@@ -163,27 +152,7 @@
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\svgs</DestinationFolders>
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\svgs</DestinationFolders>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="svgs\PowerToysDarkUpdate.ico">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">$(OutDir)\svgs</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">$(OutDir)\svgs</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\svgs</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\svgs</DestinationFolders>
-    </CopyFileToFolders>
     <CopyFileToFolders Include="svgs\PowerToysWhite.ico">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">$(OutDir)\svgs</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">$(OutDir)\svgs</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\svgs</DestinationFolders>
-      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\svgs</DestinationFolders>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="svgs\PowerToysWhiteUpdate.ico">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
