@@ -41,16 +41,39 @@ jobs:
         shell: pwsh
         run: .\tools\build\build.ps1 -Path .\src\modules\alwaysontop -Platform x64 -Configuration Release
 
-      - name: Build per-user installer
+      - name: Collect compiled product binaries
         shell: pwsh
-        run: .\tools\build\build-installer.ps1 -Platform x64 -Configuration Release -PerUser true -Force
+        run: |
+          $staging = Join-Path $env:RUNNER_TEMP 'always-on-top-release'
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
 
-      - name: Upload installer and build logs
+          $buildRoots = @(
+            'x64\Release',
+            'x64\Release\WinUI3Apps'
+          )
+
+          $found = $false
+          foreach ($root in $buildRoots) {
+            if (Test-Path $root) {
+              $destination = Join-Path $staging $root
+              New-Item -ItemType Directory -Force -Path $destination | Out-Null
+              Copy-Item "$root\*" $destination -Recurse -Force
+              $found = $true
+            }
+          }
+
+          if (-not $found) {
+            throw 'No compiled Always On Top product binaries were found.'
+          }
+
+          Compress-Archive -Path "$staging\*" -DestinationPath "$env:RUNNER_TEMP\PowerToys-AlwaysOnTop-x64-Release.zip" -Force
+
+      - name: Upload compiled product and build logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: always-on-top-build-output
           if-no-files-found: warn
           path: |
-            installer/PowerToysSetupVNext/x64/Release/UserSetup/**
+            ${{ runner.temp }}/PowerToys-AlwaysOnTop-x64-Release.zip
             artifacts/logs/**
