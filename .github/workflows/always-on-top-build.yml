@@ -1,0 +1,56 @@
+name: Always On Top build
+
+on:
+  pull_request:
+    paths:
+      - 'PowerToys.slnx'
+      - 'installer/**'
+      - 'src/runner/**'
+      - 'src/settings-ui/**'
+      - 'src/modules/alwaysontop/**'
+      - 'tools/build/**'
+      - '.github/workflows/always-on-top-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build x64 Release installer
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[17.0,18.0)'
+
+      - name: Set up NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore and build essential projects
+        shell: pwsh
+        run: .\tools\build\build-essentials.ps1 -Platform x64 -Configuration Release
+
+      - name: Build Always On Top module
+        shell: pwsh
+        run: .\tools\build\build.ps1 -Path .\src\modules\alwaysontop -Platform x64 -Configuration Release
+
+      - name: Build per-user installer
+        shell: pwsh
+        run: .\tools\build\build-installer.ps1 -Platform x64 -Configuration Release -PerUser true -Force
+
+      - name: Upload installer and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: always-on-top-build-output
+          if-no-files-found: warn
+          path: |
+            installer/PowerToysSetupVNext/x64/Release/UserSetup/**
+            artifacts/logs/**
