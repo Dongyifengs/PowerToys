@@ -1,0 +1,79 @@
+name: Always On Top build
+
+on:
+  pull_request:
+    paths:
+      - 'PowerToys.slnx'
+      - 'installer/**'
+      - 'src/runner/**'
+      - 'src/settings-ui/**'
+      - 'src/modules/alwaysontop/**'
+      - 'tools/build/**'
+      - '.github/workflows/always-on-top-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build x64 Release installer
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[17.0,18.0)'
+
+      - name: Set up NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore and build essential projects
+        shell: pwsh
+        run: .\tools\build\build-essentials.ps1 -Platform x64 -Configuration Release
+
+      - name: Build Always On Top module
+        shell: pwsh
+        run: .\tools\build\build.ps1 -Path .\src\modules\alwaysontop -Platform x64 -Configuration Release
+
+      - name: Collect compiled product binaries
+        shell: pwsh
+        run: |
+          $staging = Join-Path $env:RUNNER_TEMP 'always-on-top-release'
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+
+          $buildRoots = @(
+            'x64\Release',
+            'x64\Release\WinUI3Apps'
+          )
+
+          $found = $false
+          foreach ($root in $buildRoots) {
+            if (Test-Path $root) {
+              $destination = Join-Path $staging $root
+              New-Item -ItemType Directory -Force -Path $destination | Out-Null
+              Copy-Item "$root\*" $destination -Recurse -Force
+              $found = $true
+            }
+          }
+
+          if (-not $found) {
+            throw 'No compiled Always On Top product binaries were found.'
+          }
+
+          Compress-Archive -Path "$staging\*" -DestinationPath "$env:RUNNER_TEMP\PowerToys-AlwaysOnTop-x64-Release.zip" -Force
+
+      - name: Upload compiled product and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: always-on-top-build-output
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/PowerToys-AlwaysOnTop-x64-Release.zip
+            artifacts/logs/**
